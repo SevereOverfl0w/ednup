@@ -133,6 +133,17 @@
   (parser/parse-string "{:a,:b}")
   rewrite-clj.node.whitespace/comma?)
 
+(defn- ordered-replace
+  "Take a list of replacements to do when a predicate matches"
+  [p reps coll]
+  (first
+    (reduce
+      (fn [[new-coll reps] x]
+        (if (and (p x) (seq reps))
+          [(conj new-coll (first reps)) (rest reps)]
+          [(conj new-coll x) reps]))
+      [[] reps]
+      coll)))
 
 (def-map-type NodeMap [node]
   (get
@@ -183,8 +194,30 @@
                      (:children node))]
                (if replaced?
                  children
-                 (concat children
-                         [(n/newline-node "\n") (n/token-node k) (n/whitespace-node " ") (n/token-node v)]))))))
+                 (concat
+                   children
+                   (let [other-kvs (partition-by-kv children)
+                         k-count (count other-kvs)
+                         prev (last other-kvs)]
+                     (prn (meta (first children)))
+                     (cond
+                       (= 1 k-count)
+                       (ordered-replace
+                         (complement n/whitespace-or-comment?)
+                         [(n/token-node k) (n/token-node v)]
+                         (cons
+                           (n/newline-node "\n")
+                           (cons
+                             (n/whitespace-node (apply str (repeat (-> children first meta :col dec) \space)))
+                             (first other-kvs))))
+
+                       (:k (meta prev))
+                       (ordered-replace
+                         (complement n/whitespace-or-comment?)
+                         [(n/token-node k) (n/token-node v)]
+                         prev)
+                       :else
+                       [(n/newline-node "\n") (n/token-node k) (n/whitespace-node " ") (n/token-node v)]))))))))
 
   (dissoc
     [this k]
@@ -228,9 +261,9 @@
   (println (-> root :a :b))
 
   (n/string (assoc (->NodeMap (parser/parse-file "test.edn")) :c 20))
-  (n/string (assoc-in
+  (nm-string (assoc-in
               (->NodeMap (parser/parse-file "deps.edn"))
-              [:deps 'potemkin/potemkin :mvn/version]
+              [:deps 'potemkin/potemkin :blah]
               "20"))
 
   (n/string (dissoc (:deps (->NodeMap (parser/parse-file "deps.edn"))) 'potemkin/potemkin))
