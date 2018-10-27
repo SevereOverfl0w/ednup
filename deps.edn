@@ -1,0 +1,7 @@
+{:paths ["src"]
+ :deps
+ {;; My deps
+  potemkin/potemkin {:mvn/version "0.4.5"}
+  rewrite-clj/rewrite-clj {:mvn/version "0.6.1"}
+  ;; Dicking about:
+  }}
