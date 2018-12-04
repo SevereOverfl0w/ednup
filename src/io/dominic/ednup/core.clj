@@ -239,7 +239,8 @@
                     (map maybe-to-node-map))
               (:children node))))
 
-(def root (make-rm (z/of-file "deps.edn")))
+(comment
+  (def root (make-rm (z/of-file "deps.edn"))))
 
 (defn nm-string
   [nm]
